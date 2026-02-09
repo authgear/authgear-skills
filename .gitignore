@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local config (may contain secrets)
+*.local.json
+*.local.md
+.claude/settings.local.json
+
+# Dependencies
+node_modules/
+
+# Build / output
+dist/
+build/
+*.log
