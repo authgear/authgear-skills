@@ -4,7 +4,9 @@ Installable skills for AI coding agents ([Cursor](https://cursor.com), [Claude C
 
 ## Skills
 
-- **authgear-integration** (`skills/authgear-integration/`) — Integrate Authgear auth into web and mobile apps (React, React Native, Flutter, Android, Vue, Next.js, etc.). Covers SDK setup, login/logout flows, protected routes, user providers, and API patterns.
+- **authgear-integration** (`skills/authgear-integration/`) — Integrate Authgear authentication into web, mobile, and backend applications:
+  - **Frontend/Mobile**: React, React Native, Flutter, Android, Vue, Next.js with SDK setup, login/logout flows, protected routes, user providers
+  - **Backend**: Python, Node.js, Go, Java, PHP, ASP.NET with JWT validation, API authentication, user verification
 
 ## Usage
 
