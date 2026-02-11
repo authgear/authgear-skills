@@ -130,7 +130,9 @@ Add to `AndroidManifest.xml`:
 
 ## Authentication
 
-**Important:** Use `AuthenticateOptions` for the redirect URI:
+**Important:**
+- Use `AuthenticateOptions` for the redirect URI
+- The `onAuthenticated` callback receives non-nullable `UserInfo` (not `UserInfo?`)
 
 ```kotlin
 import com.oursky.authgear.OnAuthenticateListener
@@ -141,8 +143,8 @@ fun authenticate() {
     val options = AuthenticateOptions("com.example.myapp://host/path")
 
     authgear.authenticate(options, object : OnAuthenticateListener {
-        override fun onAuthenticated(userInfo: UserInfo) {
-            // User authenticated successfully (userInfo is non-null)
+        override fun onAuthenticated(userInfo: UserInfo) {  // UserInfo is non-null
+            // User authenticated successfully
             val userId = userInfo.sub
         }
 
@@ -152,6 +154,8 @@ fun authenticate() {
     })
 }
 ```
+
+**Note:** Use `userInfo: UserInfo` (non-null) in `onAuthenticated`; the SDK interface does not use a nullable type.
 
 ## Logout
 
