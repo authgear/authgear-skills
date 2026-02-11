@@ -36,7 +36,7 @@ android {
 }
 
 dependencies {
-  coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.5'
+  coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'  // Use 1.1.5 or newer
 }
 ```
 
@@ -47,13 +47,37 @@ dependencies {
 3. Add as Authorized Redirect URI
 4. Note Client ID and Endpoint
 
+## Configuration Management (Optional)
+
+For better security, avoid hardcoding credentials. Use `BuildConfig` with `gradle.properties`:
+
+**gradle.properties:**
+```properties
+AUTHGEAR_CLIENT_ID=your_client_id_here
+AUTHGEAR_ENDPOINT=https://your-app.authgear.cloud
+```
+
+**app/build.gradle.kts:**
+```kotlin
+android {
+    defaultConfig {
+        buildConfigField("String", "AUTHGEAR_CLIENT_ID", "\"${project.findProperty("AUTHGEAR_CLIENT_ID")}\"")
+        buildConfigField("String", "AUTHGEAR_ENDPOINT", "\"${project.findProperty("AUTHGEAR_ENDPOINT")}\"")
+    }
+}
+```
+
+Then use `BuildConfig.AUTHGEAR_CLIENT_ID` and `BuildConfig.AUTHGEAR_ENDPOINT` in your code.
+
 ## SDK Initialization
+
+**Important:** The Authgear constructor uses **positional parameters only** - do not use named parameters.
 
 In `MainActivity.kt`:
 
 ```kotlin
-import com.authgear.core.Authgear
-import com.authgear.core.OnConfigureListener
+import com.oursky.authgear.Authgear
+import com.oursky.authgear.OnConfigureListener
 
 class MainActivity : AppCompatActivity() {
     private lateinit var authgear: Authgear
@@ -61,11 +85,14 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Use positional parameters (not named)
         authgear = Authgear(
-            application = application,
-            clientId = "<CLIENT_ID>",
-            endpoint = "<AUTHGEAR_ENDPOINT>"
+            application,
+            "<CLIENT_ID>",
+            "<AUTHGEAR_ENDPOINT>"
         )
+        // Or with BuildConfig:
+        // authgear = Authgear(application, BuildConfig.AUTHGEAR_CLIENT_ID, BuildConfig.AUTHGEAR_ENDPOINT)
 
         authgear.configure(object : OnConfigureListener {
             override fun onConfigured() {
@@ -86,7 +113,7 @@ Add to `AndroidManifest.xml`:
 
 ```xml
 <activity
-    android:name="com.authgear.core.OAuthRedirectActivity"
+    android:name="com.oursky.authgear.OAuthRedirectActivity"
     android:exported="true"
     android:launchMode="singleTask">
     <intent-filter>
@@ -103,33 +130,39 @@ Add to `AndroidManifest.xml`:
 
 ## Authentication
 
+**Important:** Use `AuthenticateOptions` for the redirect URI:
+
 ```kotlin
-import com.authgear.core.OnAuthenticateListener
+import com.oursky.authgear.OnAuthenticateListener
+import com.oursky.authgear.AuthenticateOptions
+import com.oursky.authgear.UserInfo
 
 fun authenticate() {
-    authgear.authenticate(
-        redirectUri = "com.example.myapp://host/path",
-        listener = object : OnAuthenticateListener {
-            override fun onAuthenticated(userInfo: UserInfo?) {
-                // User authenticated successfully
-            }
+    val options = AuthenticateOptions("com.example.myapp://host/path")
 
-            override fun onAuthenticationFailed(throwable: Throwable) {
-                Log.e("Authgear", "Authentication failed", throwable)
-            }
+    authgear.authenticate(options, object : OnAuthenticateListener {
+        override fun onAuthenticated(userInfo: UserInfo) {
+            // User authenticated successfully (userInfo is non-null)
+            val userId = userInfo.sub
         }
-    )
+
+        override fun onAuthenticationFailed(throwable: Throwable) {
+            Log.e("Authgear", "Authentication failed", throwable)
+        }
+    })
 }
 ```
 
 ## Logout
 
+**Important:** First parameter is a boolean (force logout), callback method is `onLogout()` (not `onLoggedOut`):
+
 ```kotlin
-import com.authgear.core.OnLogoutListener
+import com.oursky.authgear.OnLogoutListener
 
 fun logout() {
-    authgear.logout(object : OnLogoutListener {
-        override fun onLoggedOut() {
+    authgear.logout(true, object : OnLogoutListener {
+        override fun onLogout() {
             // User logged out successfully
         }
 
@@ -143,7 +176,8 @@ fun logout() {
 ## Fetch User Info
 
 ```kotlin
-import com.authgear.core.OnFetchUserInfoListener
+import com.oursky.authgear.OnFetchUserInfoListener
+import com.oursky.authgear.UserInfo
 
 fun fetchUserInfo() {
     authgear.fetchUserInfo(object : OnFetchUserInfoListener {
@@ -181,7 +215,7 @@ try {
 ## Open Settings Page
 
 ```kotlin
-import com.authgear.core.Page
+import com.oursky.authgear.Page
 
 authgear.open(Page.SETTINGS)
 ```
@@ -191,5 +225,29 @@ authgear.open(Page.SETTINGS)
 Check session state:
 
 ```kotlin
+import com.oursky.authgear.SessionState
+
 val isAuthenticated = authgear.sessionState == SessionState.AUTHENTICATED
 ```
+
+## Troubleshooting
+
+### "Unable to resolve host" / DNS Issues
+
+If you encounter `UnknownHostException` or "Unable to resolve host" errors:
+1. Check that your device/emulator has network connectivity
+2. Verify the endpoint URL is correct in your configuration
+3. Test the endpoint URL in a browser to ensure it's accessible
+4. If using an emulator, ensure it has proper network settings
+
+### "This Activity already has an action bar"
+
+If you see this error when opening Authgear settings:
+- Ensure activities that show Authgear UI use a `NoActionBar` theme
+- Example: `android:theme="@style/Theme.AppCompat.Light.NoActionBar"`
+
+### "No parameter with name 'endpoint' found"
+
+If you encounter this error:
+- Use positional parameters in the Authgear constructor (see SDK Initialization section)
+- Do NOT use named parameters like `endpoint =`
