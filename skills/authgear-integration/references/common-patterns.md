@@ -222,6 +222,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 ## API Integration with Backend
 
+### Using Authgear's Built-in Fetch (Recommended)
+
+**For Web/React Applications:**
+
+Authgear's JavaScript SDK provides a built-in `fetch` function that automatically handles authorization:
+
+```tsx
+import authgear from '@authgear/web';
+
+// Simple GET request
+const fetchUserData = async () => {
+  try {
+    const response = await authgear.fetch('https://api.example.com/api/profile');
+    const data = await response.json();
+    console.log(data);
+  } catch (error) {
+    console.error('API request failed:', error);
+  }
+};
+
+// POST request with body
+const createPost = async (postData: any) => {
+  try {
+    const response = await authgear.fetch('https://api.example.com/api/posts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(postData),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to create post:', error);
+  }
+};
+```
+
+**Benefits:**
+- ✅ Automatically includes `Authorization: Bearer <token>` header
+- ✅ Handles token refresh automatically before each request
+- ✅ Standard fetch API - works like native fetch()
+- ✅ No manual token management required
+
+**Important:** This is JavaScript/Web SDK only. For React Native, iOS, Android, and Xamarin, manually call `refreshAccessTokenIfNeeded()` and construct the Authorization header.
+
 ### React - Axios Integration
 
 ```tsx
