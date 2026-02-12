@@ -1,6 +1,6 @@
 ---
 name: authgear-integration
-description: Integrate Authgear authentication into web, mobile, and backend applications. Use when developers request to "add authentication", "integrate Authgear", "implement login/logout", "validate JWT tokens", "add auth to React/React Native/Vue/Flutter/Android/backend app", or mention Authgear SDK setup. Supports React SPA, React Native, Android, Flutter, Vue.js, Next.js, iOS, Ionic for frontend, and Python, Node.js, Go, Java, PHP, ASP.NET for backend JWT validation with automatic dependency installation, configuration, authentication flows, protected routes, user profile pages, and API integration patterns.
+description: Integrate Authgear authentication into web, mobile, and backend applications. Use when developers request to "add authentication", "integrate Authgear", "implement login/logout", "validate JWT tokens", "add auth to React/React Native/Vue/Flutter/Android/iOS/backend app", or mention Authgear SDK setup. Supports React SPA, React Native, Android, iOS, Flutter, Vue.js, Next.js, Ionic for frontend, and Python, Node.js, Go, Java, PHP, ASP.NET for backend JWT validation with automatic dependency installation, configuration, authentication flows, protected routes, user profile pages, and API integration patterns.
 ---
 
 # Authgear Integration
@@ -9,7 +9,7 @@ description: Integrate Authgear authentication into web, mobile, and backend app
 
 This skill helps developers integrate Authgear authentication into their applications quickly and correctly. It provides framework-specific guidance, reusable code templates, and common patterns for:
 
-- **Frontend Applications:** Protected routes, user profiles, API integration, role-based access control for React, React Native, Flutter, Android, and more
+- **Frontend Applications:** Protected routes, user profiles, API integration, role-based access control for React, React Native, Flutter, Android, iOS, and more
 - **Backend Applications:** JWT token validation, API authentication, user verification for Python, Node.js, Go, Java, PHP, and ASP.NET servers
 
 ## Integration Workflow
@@ -28,6 +28,7 @@ Common project types:
 - **React Native**: `package.json` with `react-native`, `ios/` and `android/` directories
 - **Flutter**: `pubspec.yaml` with `flutter` dependency
 - **Android**: `build.gradle` files, `AndroidManifest.xml`
+- **iOS**: `Podfile`, `.xcodeproj` or `.xcworkspace` files, Swift source files
 - **Vue.js**: `package.json` with `vue` dependency
 - **Next.js**: `package.json` with `next` dependency
 
@@ -111,6 +112,10 @@ flutter pub add flutter_authgear
 **Android:**
 Add to `build.gradle` - see [references/android.md](references/android.md)
 
+**iOS:**
+Via Swift Package Manager: `https://github.com/authgear/authgear-sdk-ios.git`
+Or CocoaPods: `pod 'Authgear', :git => 'https://github.com/authgear/authgear-sdk-ios.git'`
+
 ### 4. Configure Environment Variables
 
 Create or update `.env` file (or appropriate config for framework):
@@ -164,6 +169,13 @@ See [references/flutter.md](references/flutter.md) for complete implementation d
 3. Configure redirect activity in manifest
 
 See [references/android.md](references/android.md) for complete implementation details.
+
+**For iOS:**
+1. Add SDK via Swift Package Manager or CocoaPods
+2. Initialize Authgear instance in app
+3. Configure custom URI scheme in Info.plist
+
+See [references/ios.md](references/ios.md) for complete implementation details.
 
 ### 6. Implement Requested Features
 
@@ -465,6 +477,7 @@ For detailed implementation instructions, consult these framework-specific refer
 - **React SPA**: [references/react.md](references/react.md)
 - **React Native**: [references/react-native.md](references/react-native.md)
 - **Android**: [references/android.md](references/android.md)
+- **iOS**: [references/ios.md](references/ios.md)
 - **Flutter**: [references/flutter.md](references/flutter.md)
 
 **Backend:**
