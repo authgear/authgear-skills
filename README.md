@@ -7,6 +7,9 @@ Installable skills for AI coding agents ([Cursor](https://cursor.com), [Claude C
 - **authgear-integration** (`skills/authgear-integration/`) — Integrate Authgear authentication into web, mobile, and backend applications:
   - **Frontend/Mobile**: React, React Native, Flutter, Android, Vue, Next.js with SDK setup, login/logout flows, protected routes, user providers
   - **Backend**: Python, Node.js, Go, Java, PHP, ASP.NET with JWT validation, API authentication, user verification
+- **authgear-build-custom-ui** (`skills/authgear-build-custom-ui/`) — Build a Custom UI (login / signup / forgot-password pages) on the Authentication Flow API from your `authentication_flow` YAML, deploy it, and update it when the YAML changes:
+  - **Frameworks**: React (SPA)
+  - **Deploy targets**: Cloudflare
 
 ## Usage
 
@@ -20,4 +23,7 @@ skills/
     SKILL.md
     assets/
     references/
+  authgear-build-custom-ui/  # Custom UI (Authentication Flow API) skill
+    SKILL.md
+    references/           # links to upstream specs/source + errata; frameworks/, deploy/
 ```
