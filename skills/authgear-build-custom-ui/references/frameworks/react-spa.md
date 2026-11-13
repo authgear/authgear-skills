@@ -19,7 +19,7 @@ Use the versions and commands those pages give **today**. Don't reuse versions f
   `VITE_BOT_PROTECTION_SITE_KEY` / `VITE_APP_HOME_URL` if they're needed. Commit a `.env.example`. Keep `.env.local` gitignored.
 - A fixed dev port in the Vite config, so the localhost Custom UI URI registered in the Portal stays stable.
 - Client-side routes for each entry flow in the screen plan, plus `/oauth-callback` when OAuth is reachable,
-  plus a catch-all route (not-found / "start from your app" page).
+  plus `/reset-password` when recovery links open the Custom UI, plus a catch-all route (not-found / "start from your app" page).
 - SPA fallback at the host. Every route must serve `index.html`. Vite dev/preview already does this. For production, see the deploy reference.
 
 ## Suggested structure (adapt to the plan)
@@ -44,5 +44,6 @@ src/
 - StrictMode runs effects twice in development. Guard flow creation and the OAuth callback submit with a ref,
   or with an in-flight promise cache, so you don't create two flows or redeem the code twice.
 - The `useActionState` / `useFormStatus` pattern works well for screen forms. Keep the `state_token` in runner state, not in DOM inputs.
-- Use React Router's `useSearchParams()` / `location.search` to read the authorization query once at entry, then store it (see `ui-implementation.md` §2).
+- Read the authorization query in the **entry route components** (not app-wide in `main.tsx`/`App.tsx`), using React
+  Router's `useSearchParams()` / `location.search`, and follow the capture rules in `ui-implementation.md` §2.
 - `window.location.href = …` for `finish_redirect_uri` and OAuth URLs. Router navigation can't leave the SPA.

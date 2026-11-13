@@ -19,6 +19,8 @@ User's app → Authgear /oauth2/authorize?client_id=…
   → Custom UI creates a flow: POST {endpoint}/api/v1/authentication_flows {type, name, url_query}
   → Custom UI renders whatever action the response asks for, POSTs input to /states/input, repeats
   → action.type == "finished" → window.location.href = action.data.finish_redirect_uri
+    (account_recovery is created without x_ref, so it finishes with no finish_redirect_uri and shows a
+     success screen; see ui-implementation.md §3)
   → Authgear completes OIDC and redirects back to the user's app
 ```
 
@@ -71,6 +73,22 @@ ask for those too. An allowlist limits which flow names this client may create.
 How the user got the YAML doesn't matter (e.g. their config repo, or exporting the config from the Portal).
 Just ask them to provide it.
 
+Some runtime behaviour is set **outside** `authentication_flow`. Ask for these sections too, if the user can share
+them (or ask the questions directly). Never ask for secrets.
+- `authenticator.oob_otp.email.email_otp_mode`: `login_link` makes email login OTP a magic **link** instead of a code.
+- `authentication.secondary_authentication_grace_period`: during a 2FA grace period, a login `authenticate` step can
+  turn into 2FA **enrollment** (`create_authenticator` screens).
+- Top-level `bot_protection` (`enabled`, `provider.type`, `provider.site_key`): bot protection only applies when this is enabled.
+- `identity.oauth.providers` (each `alias`, `type` and `credentials_behavior`): the YAML only says `identification: oauth`.
+  This section tells you which providers exist, including whether Apple is used (see the Apple erratum), and which provider
+  consoles need the callback URL.
+- Top-level `account_linking`: whether signup can turn into "sign in to link this account" screens (the default action is `error`).
+- `authenticator.password.force_change`: when false, `change_password` appears only for expired passwords, not for
+  policy changes (`intent_login_flow_step_change_password.go`).
+- If an entry flow is named `default` but **isn't defined** in the YAML, the server generates it from `identity`,
+  `authentication`, `authenticator`, `verification`, `bot_protection` and `ui.forgot_password` (`generate_config_*.go`).
+  Ask for those sections, or describe the flow back to the user and get it confirmed (see `references/flow-config.md`).
+
 Also ask whether their app uses **reauthentication** (asking a signed-in user to confirm their identity again,
 e.g. the SDK's `reauthenticate`). If it does, the Custom UI must also handle the `reauth` flow; see
 [Reauthentication](#reauthentication).
@@ -95,6 +113,10 @@ The reference for each framework is in `references/frameworks/`: React SPA → `
 
 **c. Deployment target.** Use AskUserQuestion. Today: **Cloudflare**. Add more options here when more targets are supported, e.g. Vercel.
 → `references/deploy/cloudflare.md`.
+
+**Prerequisite: Custom UI must be enabled for the project.** It's a plan feature (`oauth.client.custom_ui_enabled`,
+default `false`, in `pkg/lib/config/feature_oauth.go`). When it's off, saving any `x_custom_ui_uri` fails with
+"custom ui is disallowed". Ask the user to confirm their plan allows it before building anything.
 
 **d. Project details.** Ask for or confirm these:
 - Authgear endpoint, e.g. `https://myproject.authgear.cloud` or a custom domain. No trailing slash.
@@ -142,10 +164,11 @@ Read `references/ui-implementation.md` (the rules every Custom UI must follow) a
 and input schema file that `authflow-api.md` points to, and apply its errata. Then build:
 
 1. **API client.** `create`, `input`, `batch input`, `get state`, and a typed error class.
-   Every call uses `credentials: "include"`. Every create sends the authorization query as `url_query` in the request body.
+   Every call uses `credentials: "include"`. Every create sends the authorization query as `url_query` in the request body
+   (for `account_recovery`, with `x_ref` removed; see `ui-implementation.md` §3).
 2. **Flow runner.** Keeps the current `state_token` and the result in navigation
    state, so the browser Back button works. Submits input. Navigates to
-   `finish_redirect_uri`.
+   `finish_redirect_uri`. Account recovery has none (created without `x_ref`), so it shows a success screen (`ui-implementation.md` §3).
 3. **One component per screen in the plan.** Each component dispatches on
    `action.type` plus `data.type` / `identification` / `authentication`. Include
    a fallback "unsupported step" screen that logs the full action, so a YAML
@@ -214,24 +237,30 @@ Follow the deploy reference (e.g. `references/deploy/cloudflare.md`). Before run
 command that publishes, confirm with the user: it creates public infrastructure on their account.
 After deploying:
 - Give the deployed URL.
-- Tell the user to update the client's **Custom UI URI** to the deployed entry URL.
-  Keep the localhost one on a separate dev client if they still need it.
+- Tell the user to set the **Custom UI URI** of the production client(s) to the deployed entry URL.
+  The test client from step 5 can keep the localhost URL.
 - Repeat the smoke test from step 5 against the deployed URL.
 
 ### 8. Hand-off checklist
 
 Finish with a short checklist of the Portal / provider settings that this build
 depends on. Include only the items that apply:
-- **Custom UI URI.** `x_custom_ui_uri` on the OAuth client. Every API call depends
-  on it, because without it Authgear doesn't allow CORS for the UI's origin.
+- **Custom UI enabled on the plan** (`custom_ui_enabled`); otherwise the Custom UI URI can't be saved.
+- **Custom UI URI.** `x_custom_ui_uri` on the OAuth client. Authgear redirects sign-ins to it, and its origin is
+  allowed for CORS. (CORS also allows a few other origins, e.g. every client's `redirect_uris`; see `cors_matcher.go`.)
 - **Authorized redirect URIs** for the user's app. The Custom UI doesn't need one for itself.
-- **Flow allowlist entries**, if the client uses an allowlist and the flows aren't named `default`.
+- **Flow allowlist entries**, if the client uses `x_authentication_flow_allowlist`. This also applies to flows named
+  `default`. They're allowed only if listed, or if the allowlist has a group named `default` that isn't defined in
+  `ui.authentication_flow.groups` (`CanCreateFlow` in `pkg/lib/authenticationflow/allowlist.go`).
 - **OAuth providers.** Add `{custom-ui-origin}/oauth-callback` to each provider's own
   console as an authorized redirect URI. This is not Authgear's `/sso/oauth2/callback/...` URL.
-- **Bot protection site key**, if the YAML enables `bot_protection`.
+- **Bot protection site key**, if the YAML enables `bot_protection`. Add the Custom UI's hostnames (and `localhost`) to
+  the key's allowed hostnames at Cloudflare Turnstile / Google reCAPTCHA.
 - **Hosting domain.** See [Cross-site limitations](#cross-site-limitations).
-- **Email templates**, if a recovery link should open the Custom UI (`ui-implementation.md` §6).
-- **`x_native_apps`**, if passkeys are used inside a native app's WebView (`authflow-api.md` → passkey erratum).
+- **Email templates**, if a recovery link should open the Custom UI (`ui-implementation.md` §6). This is project-wide:
+  it affects every client, including Admin-API-triggered resets, and must be done for every locale. See the `authflow-api.md` errata.
+- **`x_native_apps`**, if passkeys are used inside a native app's WebView. This is in addition to the domain rule
+  (`authflow-api.md` → passkey erratum).
 
 ## Cross-site limitations
 
@@ -254,11 +283,16 @@ When the user's app asks a signed-in user to confirm their identity again (e.g. 
 redirects to the same Custom UI URI. It forwards `id_token_hint` (but not `prompt`).
 
 - Detect `id_token_hint` in the authorization query, and create a **`reauth`** flow (from `reauth_flows`, or `default`)
-  instead of `login`, still sending `url_query` in the body.
-- The flow's identify step (`identification: id_token`) completes by itself from the session's `id_token_hint`.
-  The user normally sees only the `authenticate` screens (password, OTP, TOTP, passkey…). Don't show an identifier field.
+  instead of `login`, still sending `url_query` in the body. Confirm with the user that their app only sends
+  `id_token_hint` for reauthentication.
+- The flow must start with an `identify` step using `identification: id_token`, as the built-in one does
+  (`generate_config_reauth_flow.go`). That step completes by itself from the session's `id_token_hint`, so the user
+  normally sees only the `authenticate` screens (password, OTP, TOTP, passkey…). Don't show an identifier field.
+  A custom reauth flow without that step has no user to authenticate; flag it as an error.
 - `reauth_flows` allow only `identify` (`id_token`) and `authenticate` steps (no `recovery_code` / `device_token`).
-  Run the same review checklist on them.
+  Run the review checklist's **Errors** and **Notes** on them, but **not** its Security items:
+  `check_account_status`, `change_password` and `terminate_other_sessions` aren't allowed in a reauth flow, so suggesting
+  them would produce YAML that Authgear rejects.
 - Record it as an entry flow in `manifest.json` (e.g. `"reauth": { "type": "reauth", "name": "default", "route": "/login" }`).
 - Sources: `docs/specs/authentication-flow.md` (type: reauth),
   `pkg/lib/authenticationflow/declarative/intent_reauth_flow_step_identify.go`, and `generate_config_reauth_flow.go`.

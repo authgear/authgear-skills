@@ -28,9 +28,11 @@ Follow what those pages say today: config file format, the SPA fallback setting,
    If Cloudflare rejects it (naming rules or already taken), ask the user for another name.
 5. **Confirm before the first deploy.** It publishes to the user's account and creates a public URL.
 6. **Headers** (via `_headers` or the documented mechanism):
-   - `Content-Security-Policy` with `connect-src 'self' <authgear endpoint> wss://<authgear host>`, the bot-protection
-     domains if they're used, and `frame-ancestors 'none'`.
+   - `Content-Security-Policy` with `connect-src 'self' <authgear endpoint> wss://<authgear host>` and
+     `frame-ancestors 'none'`. If bot protection is used, add the provider's domains to `script-src` and `frame-src` (and
+     `connect-src` if its docs say so), per Turnstile's / reCAPTCHA's current CSP guidance. Test the widget after deploying.
    - `Cache-Control: no-cache` for `index.html`. Hashed `/assets/*` can be cached long.
+   - `Referrer-Policy: no-referrer` (or at least `strict-origin`), so a recovery code in `/reset-password?code=…` can't leak.
 7. **Domain choice.** Ask before deploying:
    - `*.workers.dev` is fine for a first test. It is **cross-site** with Authgear; see SKILL.md → Cross-site limitations,
      and warn the user if the YAML uses any of those features.
@@ -38,8 +40,14 @@ Follow what those pages say today: config file format, the SPA fallback setting,
      custom domain (e.g. UI `login.example.com`, Authgear `auth.example.com`). If passkeys are used in browsers, it
      must be a subdomain of the Authgear host instead (e.g. `login.auth.example.com`). The zone must be on Cloudflare.
    - If the user chose to support Apple sign-in with a POST callback route, the deploy needs a Worker script (not assets only).
+     In SPA mode, browser **navigation** requests (Apple's form POST is one) are served `index.html` without running the
+     Worker. So configure `assets.run_worker_first` for that route (see the "Navigation requests" section of the SPA routing
+     page above), and test that a real POST reaches the Worker.
+   - Passkeys in a browser need the UI on Authgear's host or a subdomain of it. If Authgear is still on its default domain
+     (e.g. `*.authgear.cloud`), no host the user controls qualifies, so the user first needs an Authgear **custom domain**.
 8. **After deploying:** update the client's Custom UI URI in the Authgear Portal to `https://<deployed host>/login`
    (or whichever route is the entry). Add `https://<deployed host>/oauth-callback` to each OAuth provider's console.
+   If bot protection is used, add the deployed host to the Turnstile / reCAPTCHA key's allowed hostnames.
    Then smoke-test via the authorize URL.
 9. Record the deployed URL and the Worker/project name in `.authgear/manifest.json` (`deploy.url`, `deploy.name`),
    so update runs can redeploy without asking again.
