@@ -13,6 +13,8 @@ A client-side React app with no server and no SSR (**not** Next.js). Build outpu
 - Component library (default Radix UI): Radix Primitives getting started
   https://www.radix-ui.com/primitives/docs/overview/getting-started. Use **Primitives** (unstyled), not Radix Themes,
   and style them with the chosen styling approach. Install only what the docs currently recommend; don't guess package names.
+- Translations (default, unless the user asked for another approach): i18next with react-i18next, loading the JSON
+  files from `ui-implementation.md` §14. https://react.i18next.com/ and https://www.i18next.com/
 - Any other library the user names: its own current official docs.
 
 Use the versions and commands those pages give **today**. Don't reuse versions from memory.
@@ -32,11 +34,13 @@ Use the versions and commands those pages give **today**. Don't reuse versions f
 ```
 src/
   config.ts                  # env access
+  i18n/                      # setup + locale resolution from ui_locales; locales/<lang>.json (ui-implementation.md §14)
+  theme.css                  # design tokens, light + dark (ui-implementation.md §15)
   authflow/
     client.ts                # create / input / batchInput / getState, AuthFlowError
     types.ts                 # only the response/input types this UI uses
     useFlow.ts               # runner: current result, submit, history integration, finish redirect
-    errors.ts                # reason → message (see error-handling.md)
+    errors.ts                # reason → translation key (see error-handling.md)
   screens/                   # one component per screen in the plan, e.g. IdentifyScreen, PasswordScreen, OtpScreen…
   pages/                     # route entries: LoginPage, SignupPage, ForgotPasswordPage, OAuthCallbackPage, NotFound
   components/                # shared UI: Card, Field, SubmitButton, ErrorAlert, ResendButton… (wrapping the component library, if any)

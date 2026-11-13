@@ -266,7 +266,7 @@ step 1b question and a file under `references/deploy/`.
 - **Project name (required; always ask, never pick one yourself):** plain text, on its own. It becomes the project
   directory (if a subdirectory), the `package.json` name and the deploy name (e.g. the Cloudflare Worker name).
 
-Don't ask about branding (product name, logo, colours). Build a clean, neutral UI; the user restyles it afterwards.
+Don't ask about branding (product name, logo, colours). Build a polished, neutral UI (`ui-implementation.md` §15); the user restyles it afterwards.
 
 ### 2. Analyze the YAML and agree on a screen plan
 
@@ -317,10 +317,12 @@ and input schema file that `authflow-api.md` points to, and apply its errata. Th
    the Custom UI. That also needs an email template change; see `ui-implementation.md` §6. Keep the authorization query
    intact when moving between entry routes.
 5. **Error mapping.** Follow `references/error-handling.md`.
-6. **Accessibility.** Keep the look clean and neutral (no branding). Use labelled inputs, the correct
-   `autocomplete` attribute on each field (`username`, `current-password`,
-   `new-password`, `one-time-code`, `webauthn`), and visible focus states.
-   Make the layout work on mobile.
+6. **Translations.** No hard-coded user-facing text: generate JSON translation files for every language in
+   `localization.supported_languages`, and pick the language from `ui_locales` (`ui-implementation.md` §14).
+7. **Look and accessibility.** Follow the visual design baseline (`ui-implementation.md` §15): theme tokens in one
+   place, light and dark mode, a polished card layout, proper button/input/alert states. No branding; the user restyles
+   it. Use labelled inputs, the correct `autocomplete` attribute on each field (`username`, `current-password`,
+   `new-password`, `one-time-code`, `webauthn`), and visible focus states. Make the layout work on mobile.
 
 ### 5. Verify locally
 
@@ -351,7 +353,8 @@ and input schema file that `authflow-api.md` points to, and apply its errata. Th
    - **Finish:** the browser ends at the test client's redirect URI with a `code` (and the `state` you sent).
    - **Every step:** no console errors, no CORS failures, and no unexpected 4xx/5xx in the network log (read the error
      `reason` when there is one).
-   - A screenshot at mobile width of the main screens, to check the layout.
+   - Screenshots of the main screens at mobile and desktop width, in light and dark mode, and in a second language if
+     there is one. Review them against the design baseline (`ui-implementation.md` §15) and fix what looks off.
 
    Credentials and secrets: ask the user for a **test** account (or a test email/phone for signup); never use their real
    account. Don't write credentials, OTP codes or the PKCE verifier into files or commits. When a step needs something only
@@ -374,7 +377,7 @@ depends on it. It is a hidden folder, so make sure no ignore rule excludes it
     "skill": "authgear-build-custom-ui",
     "projectName": "<the name the user gave in step 1d>",
     "framework": "react-spa",
-    "ui": { "styling": "tailwindcss", "components": "radix-ui" },
+    "ui": { "styling": "tailwindcss", "components": "radix-ui", "i18n": "i18next", "languages": ["en"] },
     "deployTarget": "cloudflare",
     "authgearEndpoint": "https://myproject.authgear.cloud",
     "entryFlows": {
@@ -478,7 +481,7 @@ When the user provides a new YAML (or asks to "update the custom UI"):
    - **Entry-flow changes**: a new or renamed flow, or a change of `signup` ↔ `signup_login`. If the new YAML no longer defines a flow the UI uses (removed, or left to be generated), stop and handle it as in step 1a.
 3. Re-run the review checklist (step 2.4) on the new YAML. Show the user the change
    plan: files to add, change, and delete, plus new warnings. Get confirmation.
-4. Apply the changes. Keep the user's custom edits (styling, copy) unless they conflict.
+4. Apply the changes. Keep the user's custom edits (styling, copy) unless they conflict. Add every new string to **all** translation files, using the i18n approach in `manifest.ui`.
 5. Verify (step 5). Then overwrite `authflow.yaml`, update `manifest.json`
    (`builtAt`, `entryFlows`) and `flow-map.md`.
 6. Ask whether to redeploy. If yes, follow step 7.

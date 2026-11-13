@@ -38,7 +38,8 @@ Treat the query as opaque and forward all of it.
   can't finish. Show a "Start sign-in from your app" message instead of a form. In development,
   also show how to build a test authorize URL. **Exceptions:** `/reset-password` (opened from an email; it never has
   the query), and `/forgot-password` (recovery works without an OAuth session, and always ends on the Custom UI's own success screen).
-- `ui_locales`: use it to choose the UI language, if the UI is localized.
+- `ui_locales`: choose the UI language from it (§14). It's part of the stored `urlQuery`, so callback and resumed pages
+  get it too.
 - `login_hint`: if present and it is a plain login ID, prefill the identifier field.
 - `id_token_hint`: if present and the build supports reauthentication, create the `reauth` flow instead of `login`
   (SKILL.md → Reauthentication).
@@ -225,3 +226,57 @@ the YAML can produce need components. Show server field errors next to their fie
 - Account-recovery identify: use neutral wording that doesn't confirm the account exists.
 - Show a loading state while the flow is created.
 - Mobile-first layout, labelled inputs, visible focus, and errors linked to their fields with `aria-describedby`.
+
+## 14. Translations and `ui_locales`
+
+**No hard-coded user-facing text.** Every string the user sees (headings, labels, buttons, hints, error messages,
+`aria-label`s, the page `<title>`) comes from a translation file. Components only use keys.
+
+The rest of this section is the **default**. If the user asked for a different way to handle translations (another
+library or file format, a translation service, specific languages, …), follow their instruction instead, and record it
+in the manifest so update runs keep it.
+
+- **Languages:** read `localization.supported_languages` and `localization.fallback_language` from the config (the
+  server's defaults are `en` and `[fallback]`, `pkg/lib/config/localization.go`). Generate one JSON file per supported
+  language, e.g. `src/i18n/locales/en.json`, `zh-HK.json`, with the same keys in each. Write the fallback language
+  first, then translate it into the others. Tell the user that generated translations need a native speaker's review.
+- **Keys:** group them by screen (`login.title`, `password.submit`, `otp.sentTo`, …) plus `common.*` and `errors.*`.
+  Error messages from `error-handling.md` are keys too (`errors.InvalidCredentials`, `errors.generic`, …).
+  Use interpolation for values (`"sentTo": "We sent a code to {{target}}"`) and the library's plural support for counts
+  (attempts, seconds). Never build sentences by concatenating strings.
+- **Choosing the language**, in order: each tag in `ui_locales` (space-separated, from the stored `urlQuery`), then
+  `navigator.languages`, then the fallback language. Match each preference against the supported languages by BCP 47
+  (exact tag first, then the base language, e.g. `zh-Hant-HK` → `zh-HK` or `zh`). This mirrors the server's
+  `Resolve` in `pkg/util/intl/resolve.go`, so the UI and Authgear's emails/SMS (which use `ui_locales` from `url_query`)
+  agree on the language.
+- **Apply it:** set `<html lang>`, and `dir="rtl"` for right-to-left languages (`pkg/util/intl/rtl.go` lists them); use
+  logical CSS properties (`margin-inline-start`, …) so RTL layouts work. Format numbers and times with `Intl`. Pass the
+  language to the bot protection widget, if any (Turnstile / reCAPTCHA both take a language option).
+- `/reset-password` links have no `ui_locales`: fall back to `navigator.languages`.
+- A language switcher is optional; if you add one, keep `ui_locales` in the stored `urlQuery` in sync, so the flow's
+  messages switch too.
+
+## 15. Visual design baseline
+
+The user will restyle the UI, but the default must look finished, like a modern product's sign-in page, not a bare form.
+
+- **Theme tokens in one place** (CSS variables, or the styling library's theme): colours (background, surface, text,
+  muted text, border, primary, primary text, danger, success), radius, shadow, font. Pick one accessible neutral palette
+  with a single primary colour. Restyling should mostly mean editing this one file.
+- **Light and dark mode** via `prefers-color-scheme`, both from the tokens. Check text contrast (WCAG AA).
+- **Layout:** a centred card (max width ~400px) on a subtle background; full width with comfortable padding on mobile.
+  A consistent spacing scale; a clear heading and a one-line subheading per screen; the primary button full width.
+- **Typography:** the system font stack (or one font the user picks), a clear size hierarchy, readable line height.
+- **Controls:** inputs with clear labels, a visible focus ring, and inline error text under the field. Buttons with
+  primary / secondary / link styles, a disabled style, and a spinner while submitting (disable double submit).
+  A password show/hide toggle. A segmented or large single input for OTP codes. A resend button with its countdown.
+- **Lists of choices** (identification options, authenticators, recovery channels, OAuth providers) as clear,
+  full-width option rows or buttons, with an "or" divider between password and social login. For provider logos, follow
+  each provider's brand guidelines, or show text only.
+- **Feedback:** an alert component (error / info / success), a loading state while a flow is created, and a success
+  screen design for "Password changed" and similar end states.
+- **Small touches:** the page `<title>` per screen, a favicon placeholder, smooth (not flashy) transitions, and no layout
+  jump when errors appear.
+
+Check it in the browser test (SKILL.md step 5): screenshots of the main screens at mobile and desktop width, in light and
+dark mode, and fix what looks off before finishing.
