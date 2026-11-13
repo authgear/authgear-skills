@@ -26,7 +26,8 @@ before the parent's next sibling step. `target_step` refers to another step by i
    against the user's `identity`, `authentication`, `authenticator`, `verification`, `bot_protection` and
    `ui.forgot_password` config. Show the derived tree to the user to confirm.
 2. **Choose the entry flows**: login / signup (or `signup_login`) / forgot-password, plus reauth if the app
-   reauthenticates, by `type` + `name`. If a type has several flows, ask which one each entry uses.
+   reauthenticates, by `type` + `name`. The user chooses these (SKILL.md step 1a): list every defined flow of each type,
+   plus `default`, and ask. Don't assume `default`.
 3. **Walk each entry flow's tree.** Follow nested `steps`, and `signup_login` → `signup_flow`/`login_flow`.
    For each reachable step / identification / authentication, note the screen it needs. Look up the
    response and input shape for each in `authflow-api.md` → source map. Also add the screens that config **outside**

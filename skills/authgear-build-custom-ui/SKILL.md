@@ -64,17 +64,28 @@ If several projects match, ask the user which one to update.
 
 ### 1. Collect inputs
 
-**a. The YAML (required).** Ask for the `authentication_flow` section of their
-`authgear.yaml`, either as a file path or pasted. Accept either the bare section
-(`login_flows:` …) or a full config containing `authentication_flow:`. If they
-also have `ui.authentication_flow.groups` / `oauth.clients[].x_authentication_flow_allowlist`,
-ask for those too. An allowlist limits which flow names this client may create.
+**a. The config (required).** Ask for their **whole `authgear.yaml`**, as a file path or pasted, and tell them where to
+find it:
+- **Authgear Portal:** open the project, then **Advanced → Edit Config** (`/project/<project id>/edit-config`). The editor
+  shows the full `authgear.yaml`. Copy it **without editing anything**; the page warns about direct edits, and saving there
+  isn't needed.
+- **Self-hosted:** the `authgear.yaml` in their deployment's config source.
 
-How the user got the YAML doesn't matter (e.g. their config repo, or exporting the config from the Portal).
-Just ask them to provide it.
+The whole file is best: it holds `authentication_flow` and every related section below in one go, and it contains **no
+secrets** (those live in `authgear.secrets.yaml`, which you must never ask for). If the user prefers to share only parts,
+accept the bare `authentication_flow` section (`login_flows:` …) and ask for the related sections below separately, or ask
+the questions directly. Ask one thing at a time; don't send the user a long list of config keys.
 
-Some runtime behaviour is set **outside** `authentication_flow`. Ask for these sections too, if the user can share
-them (or ask the questions directly). Never ask for secrets.
+**Choosing the flows.** Don't assume `default`. Once you have the config, list the flows it defines per type (`login_flows`,
+`signup_flows`, `signup_login_flows`, `account_recovery_flows`, `reauth_flows`), plus `default` for each type, which always
+exists even when not defined (the server generates it). Then ask the user which flow each entry point uses (login,
+signup or signup-login, forgot password, reauth if needed). Use AskUserQuestion with the flow names as options when they fit.
+Also read `ui.authentication_flow.groups` and the `x_authentication_flow_allowlist` of the client(s) that will use the
+Custom UI (ask which clients first, from `oauth.clients`): if a client has an allowlist, only offer the flows it allows. The Custom UI picks the flow by name when it creates it, so this choice is
+the user's.
+
+Some runtime behaviour is set **outside** `authentication_flow`. Read these from the config (or ask, if the user only
+shared part of it):
 - `authenticator.oob_otp.email.email_otp_mode`: `login_link` makes email login OTP a magic **link** instead of a code.
 - `authentication.secondary_authentication_grace_period`: during a 2FA grace period, a login `authenticate` step can
   turn into 2FA **enrollment** (`create_authenticator` screens).
@@ -85,9 +96,9 @@ them (or ask the questions directly). Never ask for secrets.
 - Top-level `account_linking`: whether signup can turn into "sign in to link this account" screens (the default action is `error`).
 - `authenticator.password.force_change`: when false, `change_password` appears only for expired passwords, not for
   policy changes (`intent_login_flow_step_change_password.go`).
-- If an entry flow is named `default` but **isn't defined** in the YAML, the server generates it from `identity`,
+- Only if the user **chose** a `default` flow that **isn't defined** in the YAML: the server generates it from `identity`,
   `authentication`, `authenticator`, `verification`, `bot_protection` and `ui.forgot_password` (`generate_config_*.go`).
-  Ask for those sections, or describe the flow back to the user and get it confirmed (see `references/flow-config.md`).
+  Use those sections, then describe the derived flow back to the user and get it confirmed (see `references/flow-config.md`).
 
 Also ask whether their app uses **reauthentication** (asking a signed-in user to confirm their identity again,
 e.g. the SDK's `reauthenticate`). If it does, the Custom UI must also handle the `reauth` flow; see
@@ -204,10 +215,9 @@ Read `references/flow-config.md` and do the following:
 
 1. Parse the YAML and check it against the schema rules listed there. Report
    anything that Authgear would reject.
-2. Choose the **entry flows**: which `type` + `name` the UI creates for login,
-   for signup (or a combined `signup_login`), for forgot-password, and for reauth if the app reauthenticates. If a type
-   has several flows, ask which one each entry point uses. If the client has a
-   flow allowlist, check that the chosen flows are in it.
+2. Use the **entry flows** the user chose in step 1a (the `type` + `name` the UI creates for login, for signup or a
+   combined `signup_login`, for forgot-password, and for reauth if the app reauthenticates). Never default to `default`
+   without asking. If the client has a flow allowlist, check that the chosen flows are in it.
 3. Walk each entry flow's step tree, following `signup_login` →
    `signup_flow`/`login_flow` references and nested `steps`. List every
    **screen** the user can see and the input each screen submits. Get each screen's response and input shape
