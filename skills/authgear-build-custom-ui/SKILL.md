@@ -93,26 +93,62 @@ Also ask whether their app uses **reauthentication** (asking a signed-in user to
 e.g. the SDK's `reauthenticate`). If it does, the Custom UI must also handle the `reauth` flow; see
 [Reauthentication](#reauthentication).
 
-**b. Framework.** Use AskUserQuestion. Today there is one option. Keep the question
-anyway so more frameworks can be added later:
+**b. Framework and deployment target.** **Always ask these with AskUserQuestion, even though each has only one dedicated
+reference today.** Don't decide for the user or announce "those are the only options": the user must get the chance to pick
+"Other" and type what they want. Ask both in one call (AskUserQuestion needs at least two options per question, so each has
+a real second choice; "Other" is added automatically):
 
 ```json
 {
-  "questions": [{
-    "question": "Which framework should the Custom UI use?",
-    "header": "Framework",
-    "multiSelect": false,
-    "options": [
-      { "label": "React (SPA)", "description": "Client-side React app built with Vite. No server; static files call the Authentication Flow API from the browser. Not Next.js." }
-    ]
-  }]
+  "questions": [
+    {
+      "question": "Which framework should the Custom UI use?",
+      "header": "Framework",
+      "multiSelect": false,
+      "options": [
+        { "label": "React SPA (Recommended)", "description": "Client-side React app built with Vite and TypeScript. No server; static files call the Authentication Flow API from the browser. Not Next.js." },
+        { "label": "Explain the options", "description": "Tell me what this skill supports and why, then ask again." }
+      ]
+    },
+    {
+      "question": "Where should the Custom UI be deployed?",
+      "header": "Deploy",
+      "multiSelect": false,
+      "options": [
+        { "label": "Cloudflare (Recommended)", "description": "Deploy as static assets on Cloudflare Workers with wrangler. You log in to Cloudflare yourself." },
+        { "label": "Build only", "description": "Build and test locally; I'll deploy the static files myself." }
+      ]
+    }
+  ]
 }
 ```
 
+Handling the answers:
+- **"Explain the options"**: explain that React SPA is the recommended path with its own reference here (the Custom UI is
+  static files calling the API from the browser, so no server framework is needed), and that any other framework can be
+  typed under "Other". Then ask the framework question again.
+- **"Other" framework** (e.g. Vue, Svelte, Next.js): use it. Search the web for its current official docs (getting started,
+  routing, env variables, static/SPA build) and use `references/frameworks/react-spa.md` as the checklist of what must be
+  true, mapping each requirement and gotcha to the chosen framework (e.g. the double-run guard for flow creation and the
+  OAuth callback, reading the query only in entry routes, full-page navigation for `finish_redirect_uri`). Keep the
+  Authentication Flow API calls in the browser, as every reference here assumes. If the framework renders on a server,
+  tell the user what that changes (e.g. the host must run it, not just serve files). Show the user the mapping before scaffolding.
+- **"Other" deploy target** (e.g. Vercel, Netlify): use it. Search the web for that platform's current official docs and
+  meet the same requirements as `references/deploy/cloudflare.md` (SPA fallback, build-time env, the user logs in
+  themselves, confirm before publishing, security headers, domain choice incl. Apple's `form_post` callback, post-deploy
+  steps, recording in the manifest). Show the user how each requirement will be met on that platform before deploying.
+- **"Build only"**: skip step 7's commands, and instead list what any host must provide: SPA fallback to `index.html`, the
+  security headers (CSP, `Referrer-Policy`, `frame-ancestors`), and Apple's `form_post` callback if Apple is used. Take
+  these from `references/deploy/cloudflare.md`; they aren't Cloudflare-specific.
+- Record the choices in the manifest (`framework`, e.g. `"react-spa"` or `"vue-spa"`; `deployTarget`, e.g. `"cloudflare"`,
+  `"vercel"` or `"none"`).
+
+The same applies to "Other" in the UI stack question below: research that library's current docs and use it.
+
 The reference for each framework is in `references/frameworks/`: React SPA → `references/frameworks/react-spa.md`.
 
-Then ask about the UI stack in a second AskUserQuestion call (one call, two questions). The defaults go first; the user can
-name anything else through "Other":
+Then ask about the UI stack in a second AskUserQuestion call (one call, two questions). **Always ask; never skip it because
+defaults exist.** The defaults go first; the user can name anything else through "Other":
 
 ```json
 {
@@ -143,8 +179,9 @@ If the user names another library, follow its current official docs the same way
 client-only Vite SPA (no SSR-only setup). Record both answers in the manifest (step 6). The framework reference says how to
 set up the defaults.
 
-**c. Deployment target.** Use AskUserQuestion. Today: **Cloudflare**. Add more options here when more targets are supported, e.g. Vercel.
-→ `references/deploy/cloudflare.md`.
+**c. Deploy reference.** Cloudflare → `references/deploy/cloudflare.md`; any other target → that file as the checklist,
+plus the platform's own docs (see above). To give a target first-class support (e.g. Vercel), add it as an option in the
+step 1b question and a file under `references/deploy/`.
 
 **Prerequisite: Custom UI must be enabled for the project.** It's a plan feature (`oauth.client.custom_ui_enabled`,
 default `false`, in `pkg/lib/config/feature_oauth.go`). When it's off, saving any `x_custom_ui_uri` fails with
@@ -185,7 +222,7 @@ Read `references/flow-config.md` and do the following:
 
 ### 3. Scaffold the project
 
-Follow the framework reference, e.g. `references/frameworks/react-spa.md`. It tells
+Follow the framework reference, e.g. `references/frameworks/react-spa.md` (for another framework, the mapping agreed in step 1b). It tells
 you which official docs to read first and what the scaffold must include. Use
 the package manager the user prefers; default to npm.
 
@@ -266,7 +303,11 @@ depends on it. It is a hidden folder, so make sure no ignore rule excludes it
 
 ### 7. Deploy
 
-Follow the deploy reference (e.g. `references/deploy/cloudflare.md`). Before running any
+If the user chose **Build only** (step 1b), don't deploy. Give the host requirements listed there, and tell them to set
+the production Custom UI URI once they've deployed.
+
+Otherwise, follow the deploy reference (`references/deploy/cloudflare.md`, or for another platform the mapping agreed in
+step 1b). Before running any
 command that publishes, confirm with the user: it creates public infrastructure on their account.
 After deploying:
 - Give the deployed URL.
