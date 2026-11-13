@@ -9,7 +9,7 @@ Base: `https://raw.githubusercontent.com/authgear/authgear-server/main/`
 | **JSON schema** (allowed step types per flow type, `identification`/`authentication` enums, required keys such as `target_step`, `signup_login` rules). This is the source of truth for validation. | `pkg/lib/config/authentication_flow.go` |
 | Concepts, nesting semantics, many example configs | `docs/specs/authentication-flow.md` |
 | Valid and invalid config test cases (useful to confirm an edge case) | `pkg/lib/config/testdata/*flow*_tests.yaml` |
-| What Authgear's built-in `default` flows look like (the reference layout for security gates) | `pkg/lib/authenticationflow/declarative/generate_config_login_flow.go` (and `generate_config_signup_flow.go`, etc.) |
+| What Authgear generates for undefined flows (the reference layout for security gates, and the model when drafting a definition) | `pkg/lib/authenticationflow/declarative/generate_config_login_flow.go` (and `generate_config_signup_flow.go`, etc.) |
 | Flow groups and allowlists | `docs/specs/authentication-flow-selection.md` |
 | `fill_form` and profile fields | `docs/specs/user-profile/profile-filling.md` |
 | `select_account` config rules | `docs/specs/custom-ui-select-account.md` |
@@ -21,13 +21,13 @@ before the parent's next sibling step. `target_step` refers to another step by i
 ## Procedure
 
 1. **Validate.** Check the YAML against the schema file. Report anything Authgear would reject.
-   If an entry flow is `default` and the YAML doesn't define it, there's no tree to walk. Derive it by reading the
-   matching `generate_config_*.go` (e.g. `generate_config_login_flow.go`, `generate_config_account_recovery_flow.go`)
-   against the user's `identity`, `authentication`, `authenticator`, `verification`, `bot_protection` and
-   `ui.forgot_password` config. Show the derived tree to the user to confirm.
+   **Generated flows aren't supported** (SKILL.md step 1a): every entry flow, and every flow it references, must be defined
+   in the YAML. If one isn't, stop. If the user wants help, draft a definition by reading the matching
+   `generate_config_*.go` (e.g. `generate_config_login_flow.go`, `generate_config_account_recovery_flow.go`) against their
+   `identity`, `authentication`, `authenticator`, `verification`, `bot_protection` and `ui.forgot_password` config, and
+   show it as YAML for them to add to their config. Build only after the updated config comes back.
 2. **Choose the entry flows**: login / signup (or `signup_login`) / forgot-password, plus reauth if the app
-   reauthenticates, by `type` + `name`. The user chooses these (SKILL.md step 1a): list every defined flow of each type,
-   plus `default`, and ask. Don't assume `default`.
+   reauthenticates, by `type` + `name`. The user chooses these (SKILL.md step 1a) from the flows defined in the YAML.
 3. **Walk each entry flow's tree.** Follow nested `steps`, and `signup_login` → `signup_flow`/`login_flow`.
    For each reachable step / identification / authentication, note the screen it needs. Look up the
    response and input shape for each in `authflow-api.md` → source map. Also add the screens that config **outside**
@@ -65,7 +65,8 @@ Show them the fix.
       `change_password` must point at an `authenticate` step and `verify` at an `identify` step.
       A bare `- type: change_password` is a common mistake; the schema rejects it.
 - [ ] A `signup_login` branch missing `signup_flow`/`login_flow`, or a `select_account` branch that has `signup_flow`.
-      A reference to a flow that isn't defined (and isn't `default`).
+      A reference to a flow that isn't defined in the YAML, including an undefined `default`: Authgear would accept it
+      (it generates the flow), but this skill doesn't support generated flows.
 - [ ] A `signup_login` `select_account` branch whose target `login_flow` has no `select_account` option of its own.
 - [ ] An entry flow that isn't in the client's `x_authentication_flow_allowlist`, when the client has one. This includes
       `default` flows (see `CanCreateFlow` in `pkg/lib/authenticationflow/allowlist.go`).
