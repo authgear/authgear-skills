@@ -11,9 +11,24 @@ Installable skills for AI coding agents ([Cursor](https://cursor.com), [Claude C
   - **Frameworks**: React (SPA)
   - **Deploy targets**: Cloudflare
 
+## Installation
+
+Install with [`npx skills`](https://github.com/vercel-labs/skills):
+
+```bash
+# All skills
+npx skills add authgear/authgear-skills
+
+# A single skill
+npx skills add authgear/authgear-skills --skill authgear-integration
+npx skills add authgear/authgear-skills --skill authgear-build-custom-ui
+```
+
+Or point your agent's skills path at this repo (or copy a folder from `skills/`).
+
 ## Usage
 
-Point your agent’s skills path at this repo (or the `skills` folder)—e.g. in Cursor, Claude Code, Codex, OpenCode, Gemini CLI, or similar—so the agent can use these skills when you ask about Authgear or adding authentication.
+Once installed, just ask your agent, e.g. "add Authgear login to my React app" (authgear-integration) or "build a custom UI for my Authgear authentication flow" (authgear-build-custom-ui). The agent picks the matching skill.
 
 ## Structure
 
