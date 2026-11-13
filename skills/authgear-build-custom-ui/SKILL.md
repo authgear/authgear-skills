@@ -52,6 +52,16 @@ User's app → Authgear /oauth2/authorize?client_id=…
   latest version. Fetch the linked files before implementing. The references only add what
   upstream doesn't say: the workflow, the review checklist, and errata where the spec and the
   server disagree. If an erratum no longer matches upstream, trust upstream.
+- **Commit step by step, in the generated project.** Don't leave all the work unstaged for one commit at the end. Commit
+  each completed, working unit as you go, so the user can review, bisect and revert:
+  - New project: if the project isn't inside a git repository, run `git init` when scaffolding (step 3). If it's inside the
+    user's existing repository and there are uncommitted changes there, ask before committing anything.
+  - Commit points: the scaffold (step 3); the API client and flow runner; each entry flow or group of related screens
+    (step 4); fixes from verification (step 5); `.authgear/` (step 6); deploy config (step 7). In an update run, commit
+    each change in the agreed change plan, then the updated `.authgear/`.
+  - Each commit builds and type-checks. Stage only the files of that step (no `git add -A` that sweeps in unrelated files),
+    never commit `.env.local` or other secrets, and write a message saying what the step did.
+  - Commit to the current branch. Never push, and never rewrite history (amend, rebase, force) unless the user asks.
   Key sources:
   - API reference: https://raw.githubusercontent.com/authgear/authgear-server/main/docs/specs/authentication-flow-api-reference.md
   - Flow concepts: https://raw.githubusercontent.com/authgear/authgear-server/main/docs/specs/authentication-flow.md
@@ -320,7 +330,7 @@ and input schema file that `authflow-api.md` points to, and apply its errata. Th
 
 Write a `.authgear/` folder at the project root. A later update run
 depends on it. It is a hidden folder, so make sure no ignore rule excludes it
-(`.gitignore`, deploy ignore files), and tell the user to commit it:
+(`.gitignore`, deploy ignore files), and commit it (see "Commit step by step"):
 
 - `.authgear/authflow.yaml`: the exact YAML that this build implements, verbatim.
 - `.authgear/manifest.json`:
