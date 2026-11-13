@@ -337,10 +337,29 @@ and input schema file that `authflow-api.md` points to, and apply its errata. Th
    base64url(SHA-256(verifier)) without padding. Keep the verifier if you want to exchange the code afterwards.
    Public clients (SPA / native) are rejected without `code_challenge`.
    Opening `/login` directly, without the authorization query, cannot finish a flow.
-3. If browser automation is available (e.g. the `agent-browser` skill or Chrome DevTools MCP),
-   walk through at least the first screen of each entry flow. Check that there are
-   no CORS errors and that the options render. Ask the user to complete flows that need
-   real inboxes, phones or OAuth accounts.
+3. **Browser test (if a browser tool is available, and with the user's consent).** Check which tools you have, e.g.
+   Chrome DevTools MCP (`navigate_page`, `take_snapshot`, `fill`, `click`, `list_console_messages`,
+   `list_network_requests`, `take_screenshot`) or the `agent-browser` skill. If there's one, ask first (AskUserQuestion):
+   "Run browser tests (Recommended)" / "Skip, I'll test manually". In the question, say what it involves: the agent drives
+   a browser against their Authgear project, and testing signup **creates real users** in it. Prefer an isolated browser
+   profile if the tool supports one.
+
+   With consent, drive the real flows from the test authorize URL above:
+   - **Each entry flow**, as far as you can go: the first screen renders the options from the config; moving between
+     entry routes keeps the authorization query; Back and reload resume the flow instead of restarting it.
+   - **Errors:** e.g. a wrong password or an invalid code shows the mapped message, not raw server text.
+   - **Finish:** the browser ends at the test client's redirect URI with a `code` (and the `state` you sent).
+   - **Every step:** no console errors, no CORS failures, and no unexpected 4xx/5xx in the network log (read the error
+     `reason` when there is one).
+   - A screenshot at mobile width of the main screens, to check the layout.
+
+   Credentials and secrets: ask the user for a **test** account (or a test email/phone for signup); never use their real
+   account. Don't write credentials, OTP codes or the PKCE verifier into files or commits. When a step needs something only
+   the user has (an OTP from their inbox or phone, an OAuth provider login, a passkey prompt, a CAPTCHA), pause and ask
+   them to give you the code or complete that step in the browser, then continue.
+
+   Fix what the test finds and commit the fixes (see "Commit step by step"). Without a browser tool, or if the user
+   declines, give them a short manual checklist covering the same points.
 
 ### 6. Record what was built (required)
 
@@ -384,7 +403,7 @@ After deploying:
 - Give the deployed URL.
 - Tell the user to set the **Custom UI URI** of the production client(s) to the deployed entry URL.
   The test client from step 5 can keep the localhost URL.
-- Repeat the smoke test from step 5 against the deployed URL.
+- Repeat the step 5 test against the deployed URL (browser test with the same consent, if the user agreed), after they update the Custom UI URI.
 
 ### 8. Hand-off checklist
 
