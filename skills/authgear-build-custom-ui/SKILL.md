@@ -74,7 +74,7 @@ User's app → Authgear /oauth2/authorize?client_id=…
   - Commit points: the scaffold (step 3); the API client and flow runner; each entry flow or group of related screens
     (step 4); fixes from verification (step 5); `.authgear/` (step 6); deploy config (step 7). In an update run, commit
     each change in the agreed change plan, then the updated `.authgear/`.
-  - Each commit builds and type-checks. Stage only the files of that step (no `git add -A` that sweeps in unrelated files),
+  - Each commit builds, type-checks and passes the unit tests. Stage only the files of that step (no `git add -A` that sweeps in unrelated files),
     never commit `.env.local` or other secrets, and write a message saying what the step did.
   - Commit to the current branch. Never push, and never rewrite history (amend, rebase, force) unless the user asks.
   Key sources:
@@ -323,10 +323,31 @@ and input schema file that `authflow-api.md` points to, and apply its errata. Th
    place, light and dark mode, a polished card layout, proper button/input/alert states. No branding; the user restyles
    it. Use labelled inputs, the correct `autocomplete` attribute on each field (`username`, `current-password`,
    `new-password`, `one-time-code`, `webauthn`), and visible focus states. Make the layout work on mobile.
+8. **Unit tests for the integration code.** Write them alongside each piece (and commit them with it), so a later update
+   that breaks the integration fails a test instead of failing for real users. They run offline: mock `fetch` and the
+   websocket, never call Authgear. Cover what talks to Authgear, not visual details:
+   - **API client:** the exact request bodies. Create sends `type`, `name` and `url_query` in the body; `account_recovery`
+     strips `x_ref` from `url_query`; inputs carry `state_token`; the recovery-code input works without one; error
+     responses become the typed error with `reason` / `info`.
+   - **Each screen's input:** the exact JSON it submits, especially the errata in `references/authflow-api.md` (`index`,
+     `channel` only with several channels, `target` only when the option has none, `{ resend: true }`, `{ query }` for
+     OAuth, `request_device_token` on the completing input, …).
+   - **Flow runner dispatch:** given a response fixture for every screen in the plan, the right screen renders;
+     `finished` navigates to `finish_redirect_uri`; recovery's `finished` shows the success screen; an unknown step shows
+     the fallback screen.
+   - **OAuth state:** adds a `state` only when absent, keeps Authgear's, changes no other parameter; the callback rejects a
+     missing or wrong `state` and sends the query unchanged.
+   - **Entry and storage rules:** `urlQuery` capture and override (`ui-implementation.md` §2), Back/reload resume, the
+     "start from your app" case.
+   - **Errors and i18n:** each mapped `reason` (and `info.cause.kind`) gives the right translation key; locale resolution
+     from `ui_locales`; every translation file has the same keys.
+
+   Build the fixtures from the upstream spec and the source's `json` tags (and, after the browser test, from real
+   responses with tokens and personal data removed). Keep them in one place, e.g. `src/authflow/__fixtures__/`.
 
 ### 5. Verify locally
 
-1. Type-check and build. Fix every error.
+1. Type-check, run the unit tests, and build. Fix every error and failing test.
 2. Start the dev server. Ask the user to set up a **test client** in the Authgear Portal: a
    **Single Page Application** or **Native App** client, with its **Custom UI URI** (Applications → the client → Custom UI) set to the
    local entry URL (e.g. `http://localhost:5173/login`) and a redirect URI registered (any URL they control, since the code
@@ -391,7 +412,7 @@ depends on it. It is a hidden folder, so make sure no ignore rule excludes it
   ```
 - `.authgear/flow-map.md`: for each flow, the step tree from the YAML
   (each step's JSON pointer, e.g. `/login_flows/0/steps/0/one_of/1/steps/0`), the
-  screen it produces, and the source file(s) that implement it. Also list the
+  screen it produces, the source file(s) that implement it, and the test file(s) that cover it. Also list the
   accepted warnings from step 2 and the reason each was accepted.
 
 ### 7. Deploy
@@ -482,6 +503,10 @@ When the user provides a new YAML (or asks to "update the custom UI"):
 3. Re-run the review checklist (step 2.4) on the new YAML. Show the user the change
    plan: files to add, change, and delete, plus new warnings. Get confirmation.
 4. Apply the changes. Keep the user's custom edits (styling, copy) unless they conflict. Add every new string to **all** translation files, using the i18n approach in `manifest.ui`.
+   Run the existing unit tests **before** changing anything (a failing baseline means the project was already broken;
+   tell the user). Add or update tests for every added or changed screen, and delete tests only for removed screens.
+   Never weaken or delete a test just to make it pass: a failure means the change broke the integration, unless the
+   behaviour change is intended, in which case say so in the commit message.
 5. Verify (step 5). Then overwrite `authflow.yaml`, update `manifest.json`
    (`builtAt`, `entryFlows`) and `flow-map.md`.
 6. Ask whether to redeploy. If yes, follow step 7.

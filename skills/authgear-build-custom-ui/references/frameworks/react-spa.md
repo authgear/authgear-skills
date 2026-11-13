@@ -15,6 +15,8 @@ A client-side React app with no server and no SSR (**not** Next.js). Build outpu
   and style them with the chosen styling approach. Install only what the docs currently recommend; don't guess package names.
 - Translations (default, unless the user asked for another approach): i18next with react-i18next, loading the JSON
   files from `ui-implementation.md` §14. https://react.i18next.com/ and https://www.i18next.com/
+- Unit tests: Vitest https://vitest.dev/guide/ (shares the Vite config), with React Testing Library
+  https://testing-library.com/docs/react-testing-library/intro/ and a DOM environment for the screen and runner tests.
 - Any other library the user names: its own current official docs.
 
 Use the versions and commands those pages give **today**. Don't reuse versions from memory.
@@ -22,6 +24,7 @@ Use the versions and commands those pages give **today**. Don't reuse versions f
 ## Requirements the scaffold must meet
 
 - TypeScript in strict mode. A `type-check` script and a `build` script that fails on type errors.
+- A `test` script that runs the unit tests once (no watch mode), for the agent and for CI (SKILL.md step 4.8).
 - Config through one module (e.g. `src/config.ts`) that reads `import.meta.env.VITE_AUTHGEAR_ENDPOINT`, plus
   `VITE_BOT_PROTECTION_SITE_KEY` if they're needed. Commit a `.env.example`. Keep `.env.local` gitignored.
 - A fixed dev port in the Vite config, so the localhost Custom UI URI registered in the Portal stays stable.
