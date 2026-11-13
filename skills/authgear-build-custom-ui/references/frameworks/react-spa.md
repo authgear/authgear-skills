@@ -8,7 +8,12 @@ A client-side React app with no server and no SSR (**not** Next.js). Build outpu
 - React docs: https://react.dev/learn/build-a-react-app-from-scratch
 - Router: React Router docs https://reactrouter.com/ (use its current SPA / "declarative" or "data" mode, not framework/SSR mode)
 - Vite env variables: https://vite.dev/guide/env-and-mode
-- Styling: use whatever the user asks for. If they have no preference, use Tailwind CSS and follow its current Vite install guide: https://tailwindcss.com/docs/installation/using-vite
+- Styling (the user's answer in SKILL.md step 1b; default Tailwind CSS): Tailwind's current Vite install guide
+  https://tailwindcss.com/docs/installation/using-vite. For CSS Modules: https://vite.dev/guide/features#css-modules
+- Component library (default Radix UI): Radix Primitives getting started
+  https://www.radix-ui.com/primitives/docs/overview/getting-started. Use **Primitives** (unstyled), not Radix Themes,
+  and style them with the chosen styling approach. Install only what the docs currently recommend; don't guess package names.
+- Any other library the user names: its own current official docs.
 
 Use the versions and commands those pages give **today**. Don't reuse versions from memory.
 
@@ -34,7 +39,7 @@ src/
     errors.ts                # reason → message (see error-handling.md)
   screens/                   # one component per screen in the plan, e.g. IdentifyScreen, PasswordScreen, OtpScreen…
   pages/                     # route entries: LoginPage, SignupPage, ForgotPasswordPage, OAuthCallbackPage, NotFound
-  components/                # shared UI: Card, Field, SubmitButton, ErrorAlert, ResendButton…
+  components/                # shared UI: Card, Field, SubmitButton, ErrorAlert, ResendButton… (wrapping the component library, if any)
   main.tsx, App.tsx
 .authgear/                   # manifest.json, authflow.yaml, flow-map.md (see SKILL.md step 6)
 ```
@@ -47,3 +52,9 @@ src/
 - Read the authorization query in the **entry route components** (not app-wide in `main.tsx`/`App.tsx`), using React
   Router's `useSearchParams()` / `location.search`, and follow the capture rules in `ui-implementation.md` §2.
 - `window.location.href = …` for `finish_redirect_uri` and OAuth URLs. Router navigation can't leave the SPA.
+- Use the component library where it helps (dialogs, selects, checkboxes, tabs, toasts), but keep plain `<form>`,
+  `<input>` and `<button>` elements for credential fields, so browsers and password managers recognise them
+  (`autocomplete="username"`, `"current-password"`, `"new-password"`, `"one-time-code"`). Wrap library components in
+  `components/`, so screens don't depend on the library directly.
+- Keep the CSP (deploy reference) in sync with the stack: if a library or font loads from a CDN, its domains must be
+  allowed in `style-src`/`font-src`/`script-src`. Prefer bundling assets so no extra domains are needed.

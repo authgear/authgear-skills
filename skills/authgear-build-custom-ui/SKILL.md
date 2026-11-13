@@ -111,6 +111,38 @@ anyway so more frameworks can be added later:
 
 The reference for each framework is in `references/frameworks/`: React SPA → `references/frameworks/react-spa.md`.
 
+Then ask about the UI stack in a second AskUserQuestion call (one call, two questions). The defaults go first; the user can
+name anything else through "Other":
+
+```json
+{
+  "questions": [
+    {
+      "question": "Which styling approach should the Custom UI use?",
+      "header": "Styling",
+      "multiSelect": false,
+      "options": [
+        { "label": "Tailwind CSS (Recommended)", "description": "Utility-first CSS, installed through its Vite plugin." },
+        { "label": "CSS Modules", "description": "Plain scoped CSS files. No extra dependency; Vite supports it out of the box." }
+      ]
+    },
+    {
+      "question": "Which component library should the Custom UI use?",
+      "header": "Components",
+      "multiSelect": false,
+      "options": [
+        { "label": "Radix UI (Recommended)", "description": "Radix Primitives: unstyled, accessible components (dialog, select, checkbox, …), styled with the chosen styling approach." },
+        { "label": "None", "description": "Hand-written components only. Fewest dependencies." }
+      ]
+    }
+  ]
+}
+```
+
+If the user names another library, follow its current official docs the same way, and check that it works in a
+client-only Vite SPA (no SSR-only setup). Record both answers in the manifest (step 6). The framework reference says how to
+set up the defaults.
+
 **c. Deployment target.** Use AskUserQuestion. Today: **Cloudflare**. Add more options here when more targets are supported, e.g. Vercel.
 → `references/deploy/cloudflare.md`.
 
@@ -215,6 +247,7 @@ depends on it. It is a hidden folder, so make sure no ignore rule excludes it
     "skill": "authgear-build-custom-ui",
     "projectName": "<the name the user gave in step 1d>",
     "framework": "react-spa",
+    "ui": { "styling": "tailwindcss", "components": "radix-ui" },
     "deployTarget": "cloudflare",
     "authgearEndpoint": "https://myproject.authgear.cloud",
     "entryFlows": {
@@ -303,6 +336,8 @@ When the user provides a new YAML (or asks to "update the custom UI"):
 
 1. Read `.authgear/manifest.json`, `authflow.yaml` and `flow-map.md`.
    Then read the project's current source, because the user may have edited it.
+   Don't ask the framework or UI-stack questions again. Build new screens with the styling and component library in
+   `manifest.ui` (older manifests without `ui`: infer them from `package.json` and the existing code).
 2. Diff the new YAML against `.authgear/authflow.yaml` **semantically**.
    Compare by flow `type`+`name` and step position or `name`, not by text lines. Classify each change:
    - **Added screens**: a new step type, identification, authentication, or nested branch.
