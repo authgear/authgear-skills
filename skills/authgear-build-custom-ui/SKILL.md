@@ -35,6 +35,13 @@ User's app → Authgear /oauth2/authorize?client_id=…
   `options` array — never assume the next step from the YAML alone (e.g. `optional`
   authenticate steps, 2FA the user hasn't enrolled, `change_password` when not due,
   and `account_linking` can add or skip screens).
+- **Ask questions with AskUserQuestion, never as a numbered list in prose.** Whenever an answer can be offered as choices
+  (yes/no, confirming a value read from the config, picking from a list), use AskUserQuestion. Batch up to 4 related
+  questions per call, 2–4 options each, the recommended option first. "Other" is added automatically, so the user can
+  always type something else. Put the context (what you found in the config, why it matters) in the question text and
+  option descriptions, so each question stands on its own. Read values from the config instead of asking whenever you can,
+  and offer them as the recommended option to confirm. Only answers that can't have options (e.g. the project name)
+  are asked in plain text, one short question per message, after the structured questions.
 - **Don't use a canned template. Look up the current way to scaffold.** Before
   scaffolding or deploying, read the official docs on the web (Vite, React,
   Cloudflare, …) and use their current recommended commands and config.
@@ -74,7 +81,7 @@ find it:
 The whole file is best: it holds `authentication_flow` and every related section below in one go, and it contains **no
 secrets** (those live in `authgear.secrets.yaml`, which you must never ask for). If the user prefers to share only parts,
 accept the bare `authentication_flow` section (`login_flows:` …) and ask for the related sections below separately, or ask
-the questions directly. Ask one thing at a time; don't send the user a long list of config keys.
+the questions directly. Ask with AskUserQuestion (see the rule at the top); don't send the user a long list of config keys.
 
 **Choosing the flows.** Don't assume `default`. Once you have the config, list the flows it defines per type (`login_flows`,
 `signup_flows`, `signup_login_flows`, `account_recovery_flows`, `reauth_flows`), plus `default` for each type, which always
@@ -194,20 +201,37 @@ set up the defaults.
 plus the platform's own docs (see above). To give a target first-class support (e.g. Vercel), add it as an option in the
 step 1b question and a file under `references/deploy/`.
 
-**Prerequisite: Custom UI must be enabled for the project.** It's a plan feature (`oauth.client.custom_ui_enabled`,
-default `false`, in `pkg/lib/config/feature_oauth.go`). When it's off, saving any `x_custom_ui_uri` fails with
-"custom ui is disallowed". Ask the user to confirm their plan allows it before building anything.
+**d. Project details.** Take as much as possible from the config; ask only what it can't answer:
+- **Authgear endpoint:** use `http.public_origin` from the config, without asking. Only if the user didn't share it, ask
+  them for the **Endpoint** shown on their application's page in the Portal. No trailing slash.
+- **Client:** find the clients in `oauth.clients` (`name`, `client_id`).
+  - None: ask the user to create one in the Portal (Applications) for the app that will use this Custom UI, and to share
+    the updated config or its client ID.
+  - Exactly one: use it; just mention which.
+  - More than one: ask which one(s) will use the Custom UI (AskUserQuestion, options = client names + IDs,
+    `multiSelect: true`).
 
-**d. Project details.** Ask for or confirm these:
-- Authgear endpoint, e.g. `https://myproject.authgear.cloud` or a custom domain. No trailing slash.
-- The OAuth client(s) that will use this Custom UI in production. A separate test client is set up in step 5.
-  Client IDs are not baked into the app.
-- The intended production hostname of the Custom UI, and Authgear's hostname. Whether they are same-site decides
-  which features work; see [Cross-site limitations](#cross-site-limitations).
-- **Project name (required; always ask, never pick one yourself).** It becomes the project directory,
-  the `package.json` name and the deploy name (e.g. the Cloudflare Worker name). Also ask whether to create it
-  as a new subdirectory or to use the current directory.
-- Optional: branding (product name, logo URL, primary colour) and the "back to app" URL.
+  Read the chosen clients' `x_authentication_flow_allowlist` from the config instead of asking. Client IDs are not baked
+  into the app. A test client for localhost is set up in step 5.
+- **OAuth providers:** read `identity.oauth.providers`; don't ask about them.
+  - Providers listed: use them (alias, type, `credentials_behavior`), and apply the Apple and demo-credential notes in
+    `references/flow-config.md`.
+  - None listed, and no chosen flow reaches `identification: oauth`: there's no social login; say nothing.
+  - None listed, but a chosen flow reaches `oauth`: tell the user their flow has an OAuth option but no provider is set up,
+    and ask whether they want social login in the UI (AskUserQuestion: "No, leave it out (Recommended)" / "Yes"). On "Yes",
+    ask them to add the provider(s) in the Portal (Authentication → Social / Enterprise Login) and share the updated config.
+    Until then, the UI doesn't render an OAuth button for a provider that doesn't exist.
+- **Hosting domain:** don't ask now. Nobody knows the deployed host before deploying: test on `localhost` (step 5) and
+  choose the domain in step 7. In step 2, just warn about the [Cross-site limitations](#cross-site-limitations) that
+  apply to *this* config, if the UI ends up on a domain outside Authgear's site.
+- **Project location:** look at the current directory first. If it is empty, or looks like a fresh repo (e.g. only
+  `.git`, `README`, `LICENSE`, `.gitignore`, no `package.json` or source), recommend **"Current directory"**. Otherwise
+  recommend **"New subdirectory"**. Ask with AskUserQuestion, the recommended option first, and say what you saw in the
+  description.
+- **Project name (required; always ask, never pick one yourself):** plain text, on its own. It becomes the project
+  directory (if a subdirectory), the `package.json` name and the deploy name (e.g. the Cloudflare Worker name).
+
+Don't ask about branding (product name, logo, colours). Build a clean, neutral UI; the user restyles it afterwards.
 
 ### 2. Analyze the YAML and agree on a screen plan
 
@@ -225,7 +249,7 @@ Read `references/flow-config.md` and do the following:
 4. Run the **review checklist** in `references/flow-config.md`. It covers missing
    `check_account_status` / `change_password` gates, `select_account`
    requirements, passkey and same-site caveats, OAuth callback needs, and
-   `link`-form OTP. Also check the [Cross-site limitations](#cross-site-limitations) against the planned hosting.
+   `link`-form OTP. Also check the [Cross-site limitations](#cross-site-limitations) that apply to this config (the domain is chosen in step 7).
 5. Present the plan to the user: the routes, the screens in each flow, and the
    warnings. Use a compact table or tree. Get confirmation before writing code.
    Ask the user about each security-gate warning; don't silently "fix" their YAML.
@@ -258,7 +282,7 @@ and input schema file that `authflow-api.md` points to, and apply its errata. Th
    the Custom UI. That also needs an email template change; see `ui-implementation.md` §6. Keep the authorization query
    intact when moving between entry routes.
 5. **Error mapping.** Follow `references/error-handling.md`.
-6. **Branding and accessibility.** Use labelled inputs, the correct
+6. **Accessibility.** Keep the look clean and neutral (no branding). Use labelled inputs, the correct
    `autocomplete` attribute on each field (`username`, `current-password`,
    `new-password`, `one-time-code`, `webauthn`), and visible focus states.
    Make the layout work on mobile.
@@ -269,7 +293,9 @@ and input schema file that `authflow-api.md` points to, and apply its errata. Th
 2. Start the dev server. Ask the user to set up a **test client** in the Authgear Portal: a
    **Single Page Application** or **Native App** client, with its **Custom UI URI** (`x_custom_ui_uri`) set to the
    local entry URL (e.g. `http://localhost:5173/login`) and a redirect URI registered (any URL they control, since the code
-   doesn't need to be exchanged). Ask them for its client ID. (The built-in `tester` client can't be used,
+   doesn't need to be exchanged). Ask them for its client ID. **If they can't find the Custom UI URI setting**, or saving
+   it fails with "custom ui is disallowed", Custom UI isn't enabled for their project (it's a plan feature,
+   `oauth.client.custom_ui_enabled` in `pkg/lib/config/feature_oauth.go`): ask them to contact Authgear support to enable it. (The built-in `tester` client can't be used,
    because it never redirects to a Custom UI.) Then open a test authorize URL with that client ID:
    `{endpoint}/oauth2/authorize?client_id={client_id}&redirect_uri={a registered redirect URI}&response_type=code&scope=openid+offline_access&code_challenge={challenge}&code_challenge_method=S256`.
    Generate the PKCE pair yourself: a random `code_verifier` (43–128 chars), and `code_challenge` =
@@ -329,7 +355,8 @@ After deploying:
 
 Finish with a short checklist of the Portal / provider settings that this build
 depends on. Include only the items that apply:
-- **Custom UI enabled on the plan** (`custom_ui_enabled`); otherwise the Custom UI URI can't be saved.
+- **Custom UI enabled on the plan** (`custom_ui_enabled`): if the Custom UI URI setting is missing in the Portal, or
+  saving it fails with "custom ui is disallowed", contact Authgear support.
 - **Custom UI URI.** `x_custom_ui_uri` on the OAuth client. Authgear redirects sign-ins to it, and its origin is
   allowed for CORS. (CORS also allows a few other origins, e.g. every client's `redirect_uris`; see `cors_matcher.go`.)
 - **Authorized redirect URIs** for the user's app. The Custom UI doesn't need one for itself.
@@ -358,8 +385,9 @@ If the Custom UI is **cross-site** with Authgear (a different registrable domain
 | SSO across apps (Authgear session) | The session cookie set at the end of the flow may be dropped as a third-party cookie |
 | "Remember this device" (`device_token`) | Same reason: the device-token cookie may be dropped |
 
-In step 2, if the planned hosting is cross-site and the YAML uses any of these, warn the user. Offer a same-site
-custom domain, or ask them to accept the limitation (record it in `flow-map.md`).
+In step 2, if the YAML uses any of these, warn the user that they only work when the UI is hosted on a domain within
+Authgear's site (a custom domain), not on a platform default such as `*.workers.dev`. The domain itself is chosen in step 7:
+offer a same-site custom domain there, or ask them to accept the limitation (record it in `flow-map.md`).
 
 ## Reauthentication
 

@@ -21,7 +21,7 @@ Use the versions and commands those pages give **today**. Don't reuse versions f
 
 - TypeScript in strict mode. A `type-check` script and a `build` script that fails on type errors.
 - Config through one module (e.g. `src/config.ts`) that reads `import.meta.env.VITE_AUTHGEAR_ENDPOINT`, plus
-  `VITE_BOT_PROTECTION_SITE_KEY` / `VITE_APP_HOME_URL` if they're needed. Commit a `.env.example`. Keep `.env.local` gitignored.
+  `VITE_BOT_PROTECTION_SITE_KEY` if they're needed. Commit a `.env.example`. Keep `.env.local` gitignored.
 - A fixed dev port in the Vite config, so the localhost Custom UI URI registered in the Portal stays stable.
 - Client-side routes for each entry flow in the screen plan, plus `/oauth-callback` when OAuth is reachable,
   plus `/reset-password` when recovery links open the Custom UI, plus a catch-all route (not-found / "start from your app" page).
