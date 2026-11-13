@@ -81,8 +81,8 @@ TOTP setup → `input_setup_totp.go`, recovery codes → `input_confirm_recovery
     with `reset_password` → `finished`, then show success and a link to the app.
     Templates for the link form: the files actually sent are `templates/<lang>/messages/forgot_password_email.txt`,
     `forgot_password_email.html` and `forgot_password_sms.txt` (registered in `pkg/lib/translation/message_declarations.go`).
-    Each contains `{{ .Link }}`; replace it with the Custom UI URL using `{{ .Code }}`. The user overrides these as
-    project template resources. Use the files in `resources/authgear/templates/en/messages/` as the starting content. Don't
+    Each contains `{{ .Link }}`; replace it with the Custom UI URL using `{{ .Code }}`. The user edits these in the
+    Portal: **Branding → Email/SMS Templates → Reset Password by Link**, for each language. Use the files in `resources/authgear/templates/en/messages/` as the starting content. Don't
     edit `messages/translation.json`, `.mjml` or `.gotemplate` files: they're build-time inputs of the server repo and aren't
     read when sending (`matchTemplatePath` in `pkg/util/template/resource.go`).
     **Warn the user before offering this; the change is project-wide.** The template gets no client context
@@ -107,7 +107,8 @@ TOTP setup → `input_setup_totp.go`, recovery codes → `input_confirm_recovery
     `auth.example.com`, `ui.auth.example.com` works and `ui-b.example.com` doesn't. The Custom UI's origin must also be
     registered as the client's `x_custom_ui_uri`.
   - **In a native app's WebView,** the browser rule above **still applies**. In addition, the app must be listed in the
-    client's `x_native_apps` (`docs/specs/passkey-webview.md`, "A Custom UI in a WebView follows Where a ceremony may run").
+    client's `x_native_apps`, which the user sets in the Portal (Applications → the native app client → Passkeys &
+    passwords in mobile apps) (`docs/specs/passkey-webview.md`, "A Custom UI in a WebView follows Where a ceremony may run").
     Authgear then serves `/.well-known/apple-app-site-association` and `assetlinks.json`
     (`pkg/auth/handler/wellknown/association_files.go`), but **only on a custom domain**.
   - `credential.toJSON()` output satisfies the assertion schema, which allows extra properties.
@@ -138,4 +139,4 @@ TOTP setup → `input_setup_totp.go`, recovery codes → `input_confirm_recovery
   `delivery_error` (`data_verify_oob_otp.go`). Show "Sending…", and show a clear error with resend on `failed`,
   instead of letting the user wait for a code that won't arrive. Re-read the state (`/states`) to refresh it.
 - **Flow allowlist.** If the client sets `x_authentication_flow_allowlist`, only the listed flows can be created.
-  See `docs/specs/authentication-flow-selection.md`.
+  See `docs/specs/authentication-flow-selection.md`. It has no Portal UI: use allowed flows, and don't ask the user to change it.

@@ -68,8 +68,9 @@ Show them the fix.
       A reference to a flow that isn't defined in the YAML, including an undefined `default`: Authgear would accept it
       (it generates the flow), but this skill doesn't support generated flows.
 - [ ] A `signup_login` `select_account` branch whose target `login_flow` has no `select_account` option of its own.
-- [ ] An entry flow that isn't in the client's `x_authentication_flow_allowlist`, when the client has one. This includes
-      `default` flows (see `CanCreateFlow` in `pkg/lib/authenticationflow/allowlist.go`).
+- [ ] An entry flow that isn't in the client's `x_authentication_flow_allowlist`, when the client has one (see `CanCreateFlow`
+      in `pkg/lib/authenticationflow/allowlist.go`). The allowlist has no Portal UI, so don't ask the user to change it or
+      mention it: use a flow the client is allowed to create instead.
 - [ ] A reauth flow that doesn't start with `identify` / `identification: id_token` (SKILL.md → Reauthentication).
 
 **Security** (a custom flow runs *only* the steps it declares; login flows only — these steps aren't allowed in reauth flows)
@@ -87,7 +88,7 @@ Compare against the built-in layout in `generate_config_login_flow.go`.
       these won't work. Warn the user (SKILL.md → Cross-site limitations).
 - [ ] `passkey`, `primary_passkey` and `prompt_create_passkey`: in a browser, the UI must be on Authgear's host or a **subdomain of it**,
       which is stricter than same-site. While Authgear is on its default domain (e.g. `*.authgear.cloud`), no user-controlled
-      host qualifies, so passkeys need an Authgear custom domain first. Inside a native app's WebView, that rule still applies, and `x_native_apps` and a custom
+      host qualifies, so passkeys need an Authgear custom domain first. Inside a native app's WebView, that rule still applies, and the app registered in the Portal (Applications → the native app client → Passkeys & passwords in mobile apps; `x_native_apps`) and a custom
       domain are needed **in addition** (see `authflow-api.md` errata). Confirm the domain plan.
 - [ ] `oauth` needs an `/oauth-callback` route, and the provider consoles must list it. Flag app-based providers (WeChat).
 - [ ] Account linking (signup `identify` returning `account_linking_identification_data`) happens when a linking rule's action

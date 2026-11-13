@@ -52,6 +52,21 @@ User's app → Authgear /oauth2/authorize?client_id=…
   latest version. Fetch the linked files before implementing. The references only add what
   upstream doesn't say: the workflow, the review checklist, and errata where the spec and the
   server disagree. If an erratum no longer matches upstream, trust upstream.
+- **Never ask the user to edit raw config keys.** Most users don't know how to, and it's easy to break the project.
+  Read the config to learn things, but when a setting must change, tell the user **where in the Portal** to change it,
+  using the Portal's labels:
+  - Custom UI URI (`x_custom_ui_uri`): **Applications → (the client) → Custom UI → Custom UI URI**. If that section is
+    missing, Custom UI isn't on their plan; they contact Authgear support.
+  - Native apps for passkeys in WebViews (`x_native_apps`): **Applications → (the native app client) → Passkeys & passwords
+    in mobile apps → Add iOS app / Add Android app**. It only takes effect on a custom domain.
+  - Settings with **no Portal UI**, such as the flow allowlist (`x_authentication_flow_allowlist`) and flow groups: don't
+    mention them to the user and don't ask them to change them. Work within them (e.g. only offer flows the client is
+    allowed to create).
+  - The one exception is the flow definitions themselves (step 1a): there is no Portal UI for them, so a missing flow can
+    only be added in Advanced → Edit Config. Give the user the exact YAML and where to paste it, and offer to walk them
+    through it.
+
+  Keep the raw key names out of what you say to the user; they're for you, to read the config and the source.
 - **Commit step by step, in the generated project.** Don't leave all the work unstaged for one commit at the end. Commit
   each completed, working unit as you go, so the user can review, bisect and revert:
   - New project: if the project isn't inside a git repository, run `git init` when scaffolding (step 3). If it's inside the
@@ -110,7 +125,8 @@ added it and shared the updated config.
 signup or signup-login, forgot password, reauth if needed). Use AskUserQuestion with the flow names as options when they
 fit; if a type has exactly one defined flow, use it and say so.
 Also read `ui.authentication_flow.groups` and the `x_authentication_flow_allowlist` of the client(s) that will use the
-Custom UI (ask which clients first, from `oauth.clients`): if a client has an allowlist, only offer the flows it allows. The Custom UI picks the flow by name when it creates it, so this choice is
+Custom UI (ask which clients first, from `oauth.clients`): if a client has an allowlist, only offer the flows it allows,
+without mentioning the allowlist (it has no Portal UI). The Custom UI picks the flow by name when it creates it, so this choice is
 the user's.
 
 Some runtime behaviour is set **outside** `authentication_flow`. Read these from the config (or ask, if the user only
@@ -310,7 +326,7 @@ and input schema file that `authflow-api.md` points to, and apply its errata. Th
 
 1. Type-check and build. Fix every error.
 2. Start the dev server. Ask the user to set up a **test client** in the Authgear Portal: a
-   **Single Page Application** or **Native App** client, with its **Custom UI URI** (`x_custom_ui_uri`) set to the
+   **Single Page Application** or **Native App** client, with its **Custom UI URI** (Applications → the client → Custom UI) set to the
    local entry URL (e.g. `http://localhost:5173/login`) and a redirect URI registered (any URL they control, since the code
    doesn't need to be exchanged). Ask them for its client ID. **If they can't find the Custom UI URI setting**, or saving
    it fails with "custom ui is disallowed", Custom UI isn't enabled for their project (it's a plan feature,
@@ -376,12 +392,9 @@ Finish with a short checklist of the Portal / provider settings that this build
 depends on. Include only the items that apply:
 - **Custom UI enabled on the plan** (`custom_ui_enabled`): if the Custom UI URI setting is missing in the Portal, or
   saving it fails with "custom ui is disallowed", contact Authgear support.
-- **Custom UI URI.** `x_custom_ui_uri` on the OAuth client. Authgear redirects sign-ins to it, and its origin is
-  allowed for CORS. (CORS also allows a few other origins, e.g. every client's `redirect_uris`; see `cors_matcher.go`.)
+- **Custom UI URI.** Portal: Applications → the client → Custom UI → Custom UI URI. Authgear redirects sign-ins to it,
+  and allows its origin for CORS.
 - **Authorized redirect URIs** for the user's app. The Custom UI doesn't need one for itself.
-- **Flow allowlist entries**, if the client uses `x_authentication_flow_allowlist`. This also applies to flows named
-  `default`. They're allowed only if listed, or if the allowlist has a group named `default` that isn't defined in
-  `ui.authentication_flow.groups` (`CanCreateFlow` in `pkg/lib/authenticationflow/allowlist.go`).
 - **OAuth providers.** Add `{custom-ui-origin}/oauth-callback` to each provider's own
   console as an authorized redirect URI. This is not Authgear's `/sso/oauth2/callback/...` URL.
 - **Bot protection site key**, if the YAML enables `bot_protection`. Add the Custom UI's hostnames (and `localhost`) to
@@ -389,8 +402,9 @@ depends on. Include only the items that apply:
 - **Hosting domain.** See [Cross-site limitations](#cross-site-limitations).
 - **Email templates**, if a recovery link should open the Custom UI (`ui-implementation.md` §6). This is project-wide:
   it affects every client, including Admin-API-triggered resets, and must be done for every locale. See the `authflow-api.md` errata.
-- **`x_native_apps`**, if passkeys are used inside a native app's WebView. This is in addition to the domain rule
-  (`authflow-api.md` → passkey erratum).
+- **Mobile apps**, if passkeys are used inside a native app's WebView. Portal: Applications → the native app client →
+  Passkeys & passwords in mobile apps → Add iOS app / Add Android app (needs a custom domain). This is in addition to the
+  domain rule (`authflow-api.md` → passkey erratum).
 
 ## Cross-site limitations
 

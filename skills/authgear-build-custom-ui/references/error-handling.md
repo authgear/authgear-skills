@@ -51,7 +51,8 @@ To find the source of any `reason`, search the repo for `WithReason("<Reason>")`
   `ScheduledAnonymizationByAdmin` (`pkg/lib/authn/user/errors.go`; `DeactivatedUser` is commented out there and never
   returned). These are terminal. Show an explanation, not a retry.
 - `AuthenticationFlowNotAllowed` on create: the flow isn't in the client's `x_authentication_flow_allowlist`. This is a
-  configuration problem, so show a developer-facing hint in dev builds.
+  configuration problem: in dev builds, show a hint that this client isn't allowed to use this flow. The allowlist has no
+  Portal UI, so the fix is to use an allowed flow, not to tell the user to edit it.
 - `AuthenticationFlowFlowNotFound` on create (`declarative/error.go`): the flow `name` isn't defined. Usually the manifest's
   entry flow no longer matches the YAML. This is a config problem, so show a developer hint and **don't** retry or recreate.
   It's a different reason from `AuthenticationFlowNotFound` (an expired or bad state token, which *is* recovered by recreating).
@@ -60,4 +61,4 @@ To find the source of any `reason`, search the repo for `WithReason("<Reason>")`
 - Bot protection: the spec's `BotProtectionRequired` doesn't exist in the source. A missing `bot_protection` input fails
   schema validation (`ValidationFailed`). A bad or expired token gives `BotProtectionVerificationFailed`; reset the widget
   and let the user retry. `BotProtectionVerificationServiceUnavailable` means the provider is down; show a retry message.
-- A network `TypeError` (no response) is almost always CORS. In dev, hint that `x_custom_ui_uri` may not be registered for this origin.
+- A network `TypeError` (no response) is almost always CORS. In dev, hint that the client's Custom UI URI (Portal: Applications → the client → Custom UI) may not match this origin.

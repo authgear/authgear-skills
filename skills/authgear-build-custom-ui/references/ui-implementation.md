@@ -127,7 +127,8 @@ logic lives in one place.
 - **Recovery link opening the Custom UI** (only if the user customizes the email template, after hearing the project-wide
   effects listed in the `authflow-api.md` errata):
   1. The user changes the forgot-password email/SMS link to e.g. `https://<ui>/reset-password?code={{ .Code }}`.
-     The template customization is done by the user in their Authgear project; tell them exactly what to change.
+     The user does this in the Portal (Branding → Email/SMS Templates → Reset Password by Link, for each language); tell
+     them exactly what to change.
   2. `/reset-password` reads `code` and POSTs `{ "input": { "account_recovery_code": code } }` with **no `state_token`**.
   3. Render `reset_password`, then show the success screen on `finished` (there's no OAuth session here, so no `finish_redirect_uri`).
      The link may be opened in another browser or device, so this page must not depend on `sessionStorage`.
@@ -150,7 +151,8 @@ logic lives in one place.
   but the **browser** rejects an `rpId` that isn't the page's host or a parent domain of it. The UI therefore
   has to be on Authgear's host or a subdomain of it; a sibling subdomain isn't enough (`docs/specs/webauthn.md`).
   Inside a native app's WebView, the same rule applies, **plus** the app must be listed in `x_native_apps`
-  (`docs/specs/passkey-webview.md`). Confirm the
+  (`docs/specs/passkey-webview.md`; the user adds it in the Portal under Applications → the native app client →
+  Passkeys & passwords in mobile apps). Confirm the
   domain plan with the user before building passkey screens (see flow-config.md checklist).
 - Reference implementation in TypeScript: Auth UI's `authui/src/passkey.ts` in authgear-server.
 - Request (sign-in): use `PublicKeyCredential.parseRequestOptionsFromJSON(option.request_options.publicKey)`
